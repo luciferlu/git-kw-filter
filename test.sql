@@ -2,5 +2,4 @@
 -- $Author$
 -- $Date$
 
-SELECT * FROM DUAL;
-;
+SELECT * FROM TEST;
