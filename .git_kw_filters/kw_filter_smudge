@@ -1,1 +1,53 @@
 #!/usr/bin/env python
+
+import sys
+import subprocess
+import re
+
+DATE_SMUDGE_REGEX = re.compile(r"\$Date\$")
+DATE_SMUDGE_REPLACE = "$Date:%s$"
+AUTHOR_SMUDGE_REGEX = re.compile(r"\$Author\$")
+AUTHOR_SMUDGE_REPLACE = "$Author:%s$"
+REVISION_SMUDGE_REGEX = re.compile(r"\$Revision\$")
+REVISION_SMUDGE_REPLACE = "$Revision:%s$"
+
+def _error(msg):
+    sys.stderr.write(msg)
+    sys.stderr.flush()
+    sys.exit(1)
+
+def smudge(file_path):
+  try:
+    process = subprocess.Popen(
+      ["git", "log", "-n", "1", "--pretty=format:%H%n%cn <%ce>%n%ci", file_path],
+      shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+  except Exception, err:
+    return _error("git command failed: %s" % err)   
+
+  process.wait()
+  returncode = process.returncode
+  if returncode != 0:
+    return _error(
+      "git command failed, returncode was: %r"
+      " - git stdout: %r"
+      " - git stderr: %r"
+      % (returncode, process.stdout.readline(), process.stderr.readline())
+    )
+
+  revision, author, c_date = process.stdout.readlines()
+
+  for line in sys.stdin:
+    if DATE_SMUDGE_REGEX.search(line):
+        line = DATE_SMUDGE_REGEX.sub(DATE_SMUDGE_REPLACE % c_date.strip(), line)
+    if AUTHOR_SMUDGE_REGEX.search(line):
+        line = AUTHOR_SMUDGE_REGEX.sub(AUTHOR_SMUDGE_REPLACE % author.strip(), line)
+    if REVISION_SMUDGE_REGEX.search(line):
+        line = REVISION_SMUDGE_REGEX.sub(REVISION_SMUDGE_REPLACE % revision.strip(), line)
+    sys.stdout.write(line)
+
+if __name__ == '__main__':
+  if len(sys.argv) < 2:
+    _error("Usage %s <file_path>" % sys.argv[0])
+  
+  smudge(sys.argv[1])

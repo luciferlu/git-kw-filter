@@ -1,1 +1,3 @@
--- reversion $Revision$ by $Author$ at $Date$
+-- $Revision$
+-- $Author$
+-- $Date$
