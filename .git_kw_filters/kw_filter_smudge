@@ -18,12 +18,9 @@ def _error(msg):
 
 def smudge(file_path):
   try:
-    cmd = "git log --pretty=\"format:%H%n%cn <%ce>%n%ci\" -- " + file_path + " | head -n 3"
-    #sys.stdout.write(cmd)
-    #sys.stdout.flush()
     process = subprocess.Popen(
-      ["-c", cmd],
-      shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+      ["git", "log", "-n", "1", "--pretty=format:%H%n%cn <%ce>%n%ci", file_path],
+      shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
   except Exception, err:
     return _error("git command failed: %s" % err)   
