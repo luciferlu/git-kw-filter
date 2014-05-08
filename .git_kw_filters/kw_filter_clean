@@ -9,6 +9,8 @@ AUTHOR_CLEAN_REGEX = re.compile(r"\$Author:[^$]+\$")
 AUTHOR_CLEAN_REPLACE = "$Author$"
 REVISION_CLEAN_REGEX = re.compile(r"\$Revision:[0-9a-z]+\$")
 REVISION_CLEAN_REPLACE = "$Revision$"
+FILE_CLEAN_REGEX = re.compile(r"\$File:[^$]+\$")
+FILE_CLEAN_REPLACE = "$File$"
 
 def _error(msg):
     sys.stderr.write(msg)
