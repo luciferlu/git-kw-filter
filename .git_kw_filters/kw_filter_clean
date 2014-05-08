@@ -9,7 +9,7 @@ AUTHOR_CLEAN_REGEX = re.compile(r"\$Author:[^$]+\$")
 AUTHOR_CLEAN_REPLACE = "$Author$"
 REVISION_CLEAN_REGEX = re.compile(r"\$Revision:[0-9a-z]+\$")
 REVISION_CLEAN_REPLACE = "$Revision$"
-FILE_CLEAN_REGEX = re.compile(r"\$File:[^$]*\$")
+FILE_CLEAN_REGEX = re.compile(r"\$File:[^$]+\$")
 FILE_CLEAN_REPLACE = "$File$"
 
 def _error(msg):
@@ -25,6 +25,8 @@ def clean():
         line = AUTHOR_CLEAN_REGEX.sub(AUTHOR_CLEAN_REPLACE, line)
     if REVISION_CLEAN_REGEX.search(line):
         line = REVISION_CLEAN_REGEX.sub(REVISION_CLEAN_REPLACE, line)
+    if FILE_CLEAN_REGEX.search(line):
+        line = FILE_CLEAN_REGEX.sub(FILE_CLEAN_REPLACE, line)
     sys.stdout.write(line)
 
 if __name__ == '__main__':
