@@ -1,6 +1,7 @@
 -- $Revision$
 -- $Author$
 -- $Date$
+-- $File$
 
 SELECT * FROM TEST;
 SELECT * FROM DUAL;

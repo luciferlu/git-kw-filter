@@ -10,6 +10,8 @@ AUTHOR_SMUDGE_REGEX = re.compile(r"\$Author\$")
 AUTHOR_SMUDGE_REPLACE = "$Author:%s$"
 REVISION_SMUDGE_REGEX = re.compile(r"\$Revision\$")
 REVISION_SMUDGE_REPLACE = "$Revision:%s$"
+FILE_SMUDGE_REGEX = re.compile(r"\$File\$")
+FILE_SMUDGE_REPLACE = "$File:%s$"
 
 def _error(msg):
     sys.stderr.write(msg)
@@ -44,6 +46,8 @@ def smudge(file_path):
         line = AUTHOR_SMUDGE_REGEX.sub(AUTHOR_SMUDGE_REPLACE % author.strip(), line)
     if REVISION_SMUDGE_REGEX.search(line):
         line = REVISION_SMUDGE_REGEX.sub(REVISION_SMUDGE_REPLACE % revision.strip(), line)
+    if FILE_SMUDGE_REGEX.search(line):
+        line = FILE_SMUDGE_REGEX.sub(FILE_SMUDGE_REPLACE % file_path.strip(), line)
     sys.stdout.write(line)
 
 if __name__ == '__main__':
