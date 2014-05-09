@@ -1,0 +1,160 @@
+#!/usr/bin/env python
+
+import sys
+import subprocess
+import re
+import argparse
+from os import path
+
+KEYWORDS = {
+  "COMMITHASH"                 : r"%H", 
+  "COMMITHASHABBREVIATED"      : r"%h", 
+  "TREEHASH"                   : r"%T", 
+  "TREEHASHABBREVIATED"        : r"%t", 
+  "PARENTHASHES"               : r"%P", 
+  "PARENTHASHESABBREVIATED"    : r"%p", 
+  "AUTHORNAME"                 : r"%an", 
+  "AUTHORNAMEMAILCAP"          : r"%aN", 
+  "AUTHOREMAIL"                : r"%ae", 
+  "AUTHOREMAILMAILCAP"         : r"%aE", 
+  "AUTHORDATE"                 : r"%ad", 
+  "AUTHORDATERFC2822"          : r"%aD", 
+  "AUTHORDATERELATIVE"         : r"%ar", 
+  "AUTHORDATEUNIX"             : r"%at", 
+  "AUTHORDATEISO8601"          : r"%ai", 
+  "COMMITTERNAME"              : r"%cn", 
+  "COMMITTERNAMEMAILCAP"       : r"%cN", 
+  "COMMITTERDATE"              : r"%cd", 
+  "COMMITTERDATERFC2822"       : r"%cD", 
+  "COMMITTERDATERELATIVE"      : r"%cr", 
+  "COMMITTERDATEUNIX"          : r"%ct", 
+  "COMMITTERDATEISO8601"       : r"%ci", 
+  "REFNAMES"                   : r"%d", 
+  "ENCODING"                   : r"%e", 
+  "SUBJECT"                    : r"%s", 
+  "SUBJECTSANITIZED"           : r"%f", 
+  "REFLOGSELECTOR"             : r"%gD", 
+  "REFLOGSELECTORSHORT"        : r"%gd", 
+  "REFLOGIDENTITYNAME"         : r"%gn", 
+  "REFLOGIDENTITYNAMEMAILCAP"  : r"%gN", 
+  "REFLOGIDENTITYEMAIL"        : r"%ge", 
+  "REFLOGIDENTITYEMAILMAILCAP" : r"%gE", 
+  "REFLOGSUBJECTS"             : r"%gs", 
+}
+
+SMUDGE = 'smudge'
+CLEAN = 'clean'
+
+IGNORE_RE = re.compile(r"##IgnoRe##")
+
+def get_meta(filename):
+  meta = {}
+
+  format = ""
+  for (k, v) in KEYWORDS.items():
+    format += "%s=%s%%n" % (k, v)
+
+  branch = subprocess.check_output(["git", "branch", "--color=never"])
+  branch = re.sub(r"\*", "", branch).strip()
+  meta['BRANCH'] = branch
+
+  log = subprocess.check_output(
+    ["git", "log", "-g", "-n", "1", '--pretty=%s' % format, '%s' % branch, "--", filename])
+
+  if log:
+    kv_pair = re.compile(r"\s*([^=][^=]*)=(.*)")
+    value_normalize = re.compile(r"^(\s|\()*(.*)(\s|\))$")
+    for kv in log.splitlines(False):
+      m = kv_pair.search(kv)
+      if not m:
+        continue
+
+      k = m.group(1).strip()
+      v = value_normalize.sub("\g<2>", m.group(2).strip())    ##IgnoRe##
+
+      meta[k] = v
+
+  meta['FILENAME'] = path.basename(filename)
+  meta['FILE'] = filename
+
+  return meta
+
+def subst(meta, line):
+  for (k,v) in meta.items():
+    line = re.sub("<%s>" % re.escape(k), v, line)
+  return line
+
+def history(filename, args, max, format, prefix):
+  cmd = ["git", "log"]
+  cmd.extend(args.split())
+  cmd.extend(["-n", max, "--pretty=" + format, "--", filename])
+
+  log = subprocess.check_output(cmd)
+  log = "Changelog:%s:%s:%s\n\n%s" % (args, max, format, log)
+  line_prefix_re = re.compile(r"^", re.MULTILINE)
+  return line_prefix_re.sub(prefix, log).strip()
+
+def smudge(filename, contents):
+  meta = get_meta(filename)
+
+  change_log_re = re.compile(r"(.*)<CHANGELOG:([^:]*):([^:]*):([^>]*)>")  ##IgnoRe##
+  for line in contents:
+    if IGNORE_RE.search(line):
+      sys.stdout.write(line)
+      continue
+
+    m = change_log_re.search(line)
+    if m:
+      sys.stdout.write(history(filename, m.group(2), m.group(3), m.group(4), m.group(1)))
+    else:
+      sys.stdout.write(subst(meta, line))
+
+def clean(filename, contents):
+  prev_contents = subprocess.check_output(["git", "show", "HEAD:" + filename]).splitlines(True)
+  meta = get_meta(filename)
+
+  smudged = {}
+  for line in prev_contents:
+    l = subst(meta, line);
+    smudged[l] = line
+
+  change_log_re = re.compile(r"(.*)Changelog:([^:]*):([^:]*):(.*)")
+  prefix = ""
+  skip = False
+  for line in contents:
+    if IGNORE_RE.search(line):
+      sys.stdout.write(line)
+      continue
+
+    if not re.search("^%s" % re.escape(prefix), line):
+      skip = False
+
+    if skip:
+      continue
+
+    m = change_log_re.search(line)
+    if m:
+      prefix = m.group(1)
+      skip = True
+
+      sys.stdout.write("%s<CHANGELOG:%s:%s:%s>\n" % (prefix, m.group(2), m.group(3), m.group(4)))
+    else:
+      if line in smudged:
+        sys.stdout.write(smudged[line])
+      else:
+        sys.stdout.write(line)
+
+def main():
+  parser = argparse.ArgumentParser(description='Git keywork filter')
+  parser.add_argument("mode", choices= [SMUDGE, CLEAN])
+  parser.add_argument("filename", metavar='FILENAME')
+  args = parser.parse_args()
+
+  contents = sys.stdin.readlines()
+  if args.mode == SMUDGE:
+    smudge(args.filename, contents)
+  else:
+    clean(args.filename, contents)
+
+if __name__ == '__main__':
+  main()
