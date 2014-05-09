@@ -137,7 +137,7 @@ def clean(filename, contents):
       prefix = m.group(1)
       skip = True
 
-      sys.stdout.write("%s<CHANGELOG:%s:%s:%s>\n" % (prefix, m.group(2), m.group(3), m.group(4)))
+      sys.stdout.write("%s<CHANGELOG:%s:%s:%s>\n" % (prefix, m.group(2), m.group(3), m.group(4)))     ##IgnoRe##
     else:
       if line in smudged:
         sys.stdout.write(smudged[line])
