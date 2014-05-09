@@ -47,6 +47,7 @@ SMUDGE = 'smudge'
 CLEAN = 'clean'
 
 IGNORE_RE = re.compile(r"##IgnoRe##")
+BRANCH_RE = re.compile(r"^\*\s*([^ ]+)$")
 
 def create_smudge_file_for(filename):
   smudge_file = path.join(path.dirname(path.dirname(__file__)), ".git", "smudge", filename)
@@ -67,8 +68,11 @@ def get_meta(filename):
   for (k, v) in KEYWORDS.items():
     format += "%s=%s%%n" % (k, v)
 
-  branch = subprocess.check_output(["git", "branch", "--color=never"])
-  branch = re.sub(r"\*", "", branch).strip()
+  branches = subprocess.check_output(["git", "branch", "--color=never"])
+  m = BRANCH_RE.search(branches)
+  branch = ""
+  if m:
+    branch = m.group(1).strip()
   meta['BRANCH'] = branch
 
   log = subprocess.check_output(
