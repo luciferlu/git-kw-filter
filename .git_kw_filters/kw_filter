@@ -4,7 +4,8 @@ import sys
 import subprocess
 import re
 import argparse
-from os import path
+import pickle
+from os import path, makedirs
 
 KEYWORDS = {
   "COMMITHASH"                 : r"%H", 
@@ -46,6 +47,18 @@ SMUDGE = 'smudge'
 CLEAN = 'clean'
 
 IGNORE_RE = re.compile(r"##IgnoRe##")
+
+def create_smudge_file_for(filename):
+  smudge_file = path.join(path.dirname(path.dirname(__file__)), ".git", "smudge", filename)
+  smudge_file_folder = path.dirname(smudge_file)
+  if not path.exists(smudge_file_folder):
+    makedirs(smudge_file_folder)
+  return open(smudge_file, 'w')
+
+def read_smudge_file_for(filename):
+  smudge_file = path.join(path.dirname(path.dirname(__file__)), ".git", "smudge", filename)
+  if path.exists(smudge_file):
+    return open(smudge_file, 'r')
 
 def get_meta(filename):
   meta = {}
@@ -96,6 +109,7 @@ def history(filename, args, max, format, prefix):
 
 def smudge(filename, contents):
   meta = get_meta(filename)
+  smudged = {}
 
   change_log_re = re.compile(r"(.*)<CHANGELOG:([^:]*):([^:]*):([^>]*)>")  ##IgnoRe##
   for line in contents:
@@ -107,16 +121,30 @@ def smudge(filename, contents):
     if m:
       sys.stdout.write(history(filename, m.group(2), m.group(3), m.group(4), m.group(1)))
     else:
-      sys.stdout.write(subst(meta, line))
+      new_line = subst(meta, line)
+      if new_line != line:
+        smudged[new_line] = line
+      sys.stdout.write(new_line)
+
+  smudge_file = create_smudge_file_for(filename)
+  if smudged:
+    pickle.dump(smudged, smudge_file)
+  smudge_file.close()
+
 
 def clean(filename, contents):
-  prev_contents = subprocess.check_output(["git", "show", "HEAD:" + filename]).splitlines(True)
-  meta = get_meta(filename)
+  #prev_contents = subprocess.check_output(["git", "show", "HEAD:" + filename]).splitlines(True)
+  #meta = get_meta(filename)
 
   smudged = {}
-  for line in prev_contents:
-    l = subst(meta, line);
-    smudged[l] = line
+  smudge_file = read_smudge_file_for(filename)
+  if smudge_file:
+    smudged = pickle.load(smudge_file)
+    smudge_file.close()
+
+  #for line in prev_contents:
+  #  l = subst(meta, line);
+  #  smudged[l] = line
 
   change_log_re = re.compile(r"(.*)Changelog:([^:]*):([^:]*):(.*)")
   prefix = ""
