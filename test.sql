@@ -32,7 +32,7 @@
 -- BRANCH: <BRANCH>
 -- FILE: <FILE>
 -- FILENAME: <FILENAME>
--- => <CHANGELOG:--reverse:3:%an : %ai : %s>
+-- * <CHANGELOG:--reverse:3:%an : %ai : %s>
 --
 SELECT * FROM TEST;
 SELECT * FROM DUAL;
