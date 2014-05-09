@@ -103,9 +103,9 @@ def history(filename, args, max, format, prefix):
   cmd.extend(["-n", max, "--pretty=" + format, "--", filename])
 
   log = subprocess.check_output(cmd)
-  log = "Changelog:%s:%s:%s\n\n%s\n" % (args, max, format, log)
+  log = "Changelog:%s:%s:%s\n\n%s" % (args, max, format, log)
   line_prefix_re = re.compile(r"^", re.MULTILINE)
-  return line_prefix_re.sub(prefix, log).strip()
+  return line_prefix_re.sub(prefix, log) + "\n"
 
 def smudge(filename, contents):
   meta = get_meta(filename)
